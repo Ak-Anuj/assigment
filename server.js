@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
@@ -15,7 +16,7 @@ const otpStore = {};
 // Middleware
 app.use(requestLogger);
 app.use(express.json());
-
+app.use(cookieParser());
 
 app.get("/", (req, res) => {
   res.json({
@@ -25,7 +26,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// CHANGE 1: /auth/login endpoint
+// /auth/login endpoint
 app.post("/auth/login", (req, res) => {
   try {
     const { email, password } = req.body;
@@ -43,13 +44,13 @@ app.post("/auth/login", (req, res) => {
       email,
       password,
       createdAt: Date.now(),
-      expiresAt: Date.now() + 2 * 60 * 1000, // 2 minutes
+      expiresAt: Date.now() + 2 * 60 * 1000,
     };
 
     // Store OTP
     otpStore[loginSessionId] = otp;
 
-    console.log(`[OTP] Session ${loginSessionId} generated`);
+    console.log(`[OTP] Session ${loginSessionId} generated: ${otp}`);
 
     return res.status(200).json({
       message: "OTP sent",
@@ -83,14 +84,14 @@ app.post("/auth/verify-otp", (req, res) => {
       return res.status(401).json({ error: "Session expired" });
     }
 
-    if (parseInt(otp) !== otpStore[loginSessionId]) {
+    if (parseInt(otp, 10) !== otpStore[loginSessionId]) {
       return res.status(401).json({ error: "Invalid OTP" });
     }
 
     res.cookie("session_token", loginSessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 15 * 60 * 1000,
     });
 
     delete otpStore[loginSessionId];
@@ -107,39 +108,26 @@ app.post("/auth/verify-otp", (req, res) => {
   }
 });
 
-app.post("/auth/token", (req, res) => {
+app.post("/auth/token", async (req, res) => {
   try {
-    const token = req.headers.authorization;
+    const sessionId = req.cookies.session_token;
 
-    if (!token) {
+    if (!sessionId) {
       return res
         .status(401)
         .json({ error: "Unauthorized - valid session required" });
     }
 
-    const session = loginSessions[token.replace("Bearer ", "")];
+    const session = loginSessions[sessionId];
 
     if (!session) {
       return res.status(401).json({ error: "Invalid session" });
     }
 
-    // Generate JWT
-    const secret = process.env.JWT_SECRET || "default-secret-key";
-
-    const accessToken = jwt.sign(
-      {
-        email: session.email,
-        sessionId: token,
-      },
-      secret,
-      {
-        expiresIn: "15m",
-      }
-    );
+    const accessToken = await generateToken(session.email);
 
     return res.status(200).json({
       access_token: accessToken,
-      expires_in: 900,
     });
   } catch (error) {
     return res.status(500).json({
@@ -154,7 +142,9 @@ app.get("/protected", authMiddleware, (req, res) => {
   return res.json({
     message: "Access granted",
     user: req.user,
-    success_flag: `FLAG-${Buffer.from(req.user.email + "_COMPLETED_ASSIGNMENT").toString('base64')}`,
+    success_flag: `FLAG-${Buffer.from(
+      req.user.email + "_COMPLETED_ASSIGNMENT"
+    ).toString("base64")}`,
   });
 });
 
