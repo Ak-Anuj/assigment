@@ -9,11 +9,13 @@ const { generateToken } = require("./utils/tokenGenerator");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Session storage (in-memory)
+
+
 const loginSessions = {};
 const otpStore = {};
 
-// Middleware
+
+
 app.use(requestLogger);
 app.use(express.json());
 app.use(cookieParser());
@@ -26,7 +28,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// /auth/login endpoint
+
 app.post("/auth/login", (req, res) => {
   try {
     const { email, password } = req.body;
@@ -35,11 +37,11 @@ app.post("/auth/login", (req, res) => {
       return res.status(400).json({ error: "Email and password required" });
     }
 
-    // Generate session and OTP
+    
     const loginSessionId = Math.random().toString(36).substring(7);
-    const otp = Math.floor(100000 + Math.random() * 900000); // 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000); 
 
-    // Store session with 2-minute expiry
+   
     loginSessions[loginSessionId] = {
       email,
       password,
@@ -47,7 +49,6 @@ app.post("/auth/login", (req, res) => {
       expiresAt: Date.now() + 2 * 60 * 1000,
     };
 
-    // Store OTP
     otpStore[loginSessionId] = otp;
 
     console.log(`[OTP] Session ${loginSessionId} generated: ${otp}`);
@@ -94,7 +95,11 @@ app.post("/auth/verify-otp", (req, res) => {
       maxAge: 15 * 60 * 1000,
     });
 
+
+
     delete otpStore[loginSessionId];
+
+
 
     return res.status(200).json({
       message: "OTP verified",
@@ -107,6 +112,9 @@ app.post("/auth/verify-otp", (req, res) => {
     });
   }
 });
+
+
+
 
 app.post("/auth/token", async (req, res) => {
   try {
@@ -126,6 +134,10 @@ app.post("/auth/token", async (req, res) => {
 
     const accessToken = await generateToken(session.email);
 
+
+
+
+
     return res.status(200).json({
       access_token: accessToken,
     });
@@ -135,9 +147,11 @@ app.post("/auth/token", async (req, res) => {
       message: "Token generation failed",
     });
   }
-});
+})
 
-// Protected route example
+
+
+
 app.get("/protected", authMiddleware, (req, res) => {
   return res.json({
     message: "Access granted",

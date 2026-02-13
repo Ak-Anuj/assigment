@@ -1,0 +1,11 @@
+Login:
+{"message":"OTP sent","loginSessionId":"ct7kd"}
+
+Verify OTP:
+{"message":"OTP verified","sessionId":"ct7kd"}
+
+Token:
+{"access_token":"HuBSim4iePC2VkMbziW5NQvkaLv+M+qSO2+/kNnmp6A="}
+
+Protected:
+{"message":"Access granted","user":{"tokenValid":true},"success_flag":"FLAG-dW5kZWZpbmVkX0NPTVBMRVRFRF9BU1NJR05NRU5U"}
